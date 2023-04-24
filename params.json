@@ -1,0 +1,8 @@
+{
+    "hostname":"127.0.0.1",
+    "username":"myuser",
+    "password":"mypass",
+    "port":3306,
+    "dbname":"airportdb",
+    "token":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+}
