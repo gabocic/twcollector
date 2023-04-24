@@ -51,7 +51,6 @@ def rest_api_call(method,relpath,data,token):
             except Exception as e:
                 print("We couldn't parse the JSON returned by the TWEngine API")
                 responsejs = {}
-    print(responsejs)
     return responsejs
 
 def get_server_parameter(conn,var_name):
