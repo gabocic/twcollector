@@ -115,7 +115,7 @@ del myjob
 ```
 
 ## Sample output
-```
+```json
 {
     "costly_operations": [
         "4932 rows were read from table `flight`. Column `departure` from index `departure_idx` was used, although the range of values specified is too broad",
