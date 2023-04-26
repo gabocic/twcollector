@@ -2,9 +2,77 @@
 Python module to submit optimization jobs to tuningwizard.query-optimization.com
 
 
-## Using the module for a single query
+## Quick start
 
-### 1. Edit params.json and configure the database connection parameters and API token
+### 1. Download the files in this repo
+
+### 2. Install the required modules
+
+```bash
+$ python -m pip install -r requirements.txt
+```
+
+
+### 3. Create an account and retrieve your token
+
+#### 3.a Using Python
+```python
+import json
+import requests
+
+twengine_url = 'https://tuningwizard.query-optimization.com/api/'
+
+def rest_api_call(method,relpath,data):
+
+    headers = { "Content-Type":"application/json" }
+    if method == 'POST':
+        response = requests.post(twengine_url+relpath, data = json.dumps(data), headers = headers)
+
+    if method == 'GET':
+        response = requests.get(twengine_url+relpath, data = json.dumps(data), headers = headers)
+    print(response.text)
+    return response
+
+# Replace values with your info
+account = {
+"email":"john.doe@domain.com",
+"password":"fastquery2023",
+"first_name":"John",
+"last_name":"Doe"
+}
+
+# Sign up
+rest_api_call('POST','accounts/signup/',account)
+
+print("Check your email click the link to verify the account")
+input("Press Enter to continue...")
+
+# Retrieve your token
+rest_api_call('POST','accounts/login/',account)
+
+```
+
+#### 3.b Using cURL
+```bash
+# Replace the values with your info
+echo '{
+"email":"myemail@domain.com",
+"password":"fastquery2023",
+"first_name":"John",
+"last_name":"Doe"
+}' > account.json
+
+# Sign up
+curl -X POST -H 'Content-Type: application/json' -d "@account.json" 'https://tuningwizard.query-optimization.com/api/accounts/signup/'
+
+# Check your email click the link to verify the account
+
+# Login and get your token
+curl -X POST -H 'Content-Type: application/json' -d "@account.json" 'https://tuningwizard.query-optimization.com/api/accounts/login/'
+```
+
+
+### 4. Edit params.json and configure the database connection parameters and API token
 
 ```json
 {
@@ -18,14 +86,8 @@ Python module to submit optimization jobs to tuningwizard.query-optimization.com
 
 ```
 
-### 2. Install dependencies
 
-```bash
-$ python -m pip install -r requirements.txt
-```
-
-
-### 3. Use the module as follows and profit
+### 5. Submit an optimization job and profit!
 
 ```python
 # Import optimization job object
