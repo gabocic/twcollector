@@ -2,3 +2,4 @@ mysqlclient
 sqlparse
 sqlglot
 requests
+json-duplicate-keys
