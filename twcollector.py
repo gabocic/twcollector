@@ -7,6 +7,7 @@ import requests
 import sys
 import random
 import string
+import json_duplicate_keys
 
 twengine_url = 'https://tuningwizard.query-optimization.com/api/'
 
@@ -76,7 +77,7 @@ def collect_query_data(conn,sqltext,default_schema,token) :
     conn.query(explainstmt)
     r = conn.store_result()
     explaintxt = r.fetch_row(how=1)[0]['EXPLAIN']
-    explainjs = json.loads(explaintxt)
+    explainjs = json_duplicate_keys.loads(explaintxt)
 
     # Create Optimization Job
     data = {}
@@ -92,7 +93,7 @@ def collect_query_data(conn,sqltext,default_schema,token) :
         return optjob_id
 
     # Attach execution plan to job
-    data = {"plan": explainjs}
+    data = {"plan": json.dumps(explainjs)}
     qp_res = rest_api_call('POST','optjobs/'+optjob_id.__str__()+'/executionplan/',data,token)
     if len(qp_res.keys()) == 0:
         return optjob_id
