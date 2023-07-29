@@ -224,6 +224,11 @@ class OptJob:
         self.token = token
         self.params = {'hostname':hostname, 'username':user,'password':passwd,'database':defdb,'port':port}
 
+        #The current SQL parser can't handle \G
+        sqlstrip = sqltext.strip()
+        if sqlstrip[-1].upper() == 'G' and sqlstrip[-2] == '\\':
+            sqltext = sqlstrip[:-2].strip()
+
         # Do not create a job if sqlglot can't properly parse the query
         try:
             parse_one(sqltext,"mysql").find_all(exp.Table)
