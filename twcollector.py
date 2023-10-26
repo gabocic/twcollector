@@ -25,8 +25,10 @@ def get_table_names(sqltext):
         for table in sg_table_list:
             if '.' in str(table):
                 table_db = str(table).split('.')[0]
+                if table_db[0] == '"': table_db = table_db[1:]
+                if table_db[-1] == '"': table_db = table_db[:-1]
             else:
-                table_db = None       
+                table_db = None
             tables_dict[table.name] = table_db
     return tables_dict
 
@@ -99,11 +101,12 @@ def collect_query_data(conn,sqltext,default_schema,token) :
         return optjob_id
 
     # Attach dbserver to job
-    versionparam = get_server_parameter(conn,"version_comment")
+    versionparam = get_server_parameter(conn,"version")
+    version_comm_param = get_server_parameter(conn,"version_comment")
 
-    if 'mariadb' in versionparam.lower():
+    if 'mariadb' in versionparam.lower() or 'mariadb' in version_comm_param.lower():
         server_type = 2
-    elif 'percona' in versionparam.lower():
+    elif 'percona' in versionparam.lower() or 'percona' in version_comm_param.lower():
         server_type = 3
     else:
         server_type = 1
