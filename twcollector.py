@@ -110,7 +110,15 @@ def collect_query_data(conn,sqltext,default_schema,token) :
         server_type = 3
     else:
         server_type = 1
-    server_version = get_server_parameter(conn,"innodb_version")
+
+    # Extract version number from version GV
+    full_server_version = get_server_parameter(conn,"version")
+
+    if '-' in full_server_version:
+        server_version = full_server_version.split('-')[0]
+    else:
+        server_version = full_server_version    
+
     hostname = get_server_parameter(conn,"hostname")
     data = {"server_type":server_type,"server_version":server_version,"hostname":hostname}
     dbs_res = rest_api_call('POST','optjobs/'+optjob_id.__str__()+'/dbserver/',data,token)
@@ -189,8 +197,15 @@ def collect_query_data(conn,sqltext,default_schema,token) :
         
 
         # Index data
-        conn.query('select INDEX_NAME,NON_UNIQUE,SEQ_IN_INDEX,COLUMN_NAME,COLLATION,CARDINALITY,SUB_PART,PACKED,NULLABLE,INDEX_TYPE \
-        from information_schema.statistics where table_name = \''+tablename+'\' and table_schema = \''+schema+'\'')
+        # Contemplate functional indexes in MySQL 8.0
+        if server_type in [1,3] and server_version[0] == '8':
+            index_query = 'select INDEX_NAME,NON_UNIQUE,SEQ_IN_INDEX,COLUMN_NAME,COLLATION,CARDINALITY,SUB_PART,PACKED,NULLABLE,INDEX_TYPE, \
+            EXPRESSION from information_schema.statistics where table_name = \''+tablename+'\' and table_schema = \''+schema+'\''
+        else:
+            index_query = 'select INDEX_NAME,NON_UNIQUE,SEQ_IN_INDEX,COLUMN_NAME,COLLATION,CARDINALITY,SUB_PART,PACKED,NULLABLE,INDEX_TYPE \
+            from information_schema.statistics where table_name = \''+tablename+'\' and table_schema = \''+schema+'\''
+
+        conn.query(index_query)
         r = conn.store_result()
         
         while True:
@@ -203,10 +218,29 @@ def collect_query_data(conn,sqltext,default_schema,token) :
                 nullable = True
             else:
                 nullable = False
+
+            # Define the is_functional field
+            is_functional = False
+            expression = None
+            if 'EXPRESSION' in index_row \
+            and index_row['EXPRESSION'] != None \
+            and index_row['COLUMN_NAME'] == None:
+                is_functional = True
+                expression = index_row['EXPRESSION']
         
-            data = {"key_name":index_row['INDEX_NAME'],"unique":not bool(index_row['NON_UNIQUE']),"seq_in_index":index_row['SEQ_IN_INDEX'],
-            "column_name":index_row['COLUMN_NAME'],"cardinality":index_row['CARDINALITY'],"sub_part":index_row['SUB_PART'],"packed":index_row['PACKED'],
-            "nullable":nullable,"index_type":index_row['INDEX_TYPE']}
+            data = {
+                "key_name":index_row['INDEX_NAME'],
+                "unique":not bool(index_row['NON_UNIQUE']),
+                "seq_in_index":index_row['SEQ_IN_INDEX'],
+                "column_name":index_row['COLUMN_NAME'],
+                "cardinality":index_row['CARDINALITY'],
+                "sub_part":index_row['SUB_PART'],
+                "packed":index_row['PACKED'],
+                "nullable":nullable,
+                "index_type":index_row['INDEX_TYPE'],
+                "expression":expression,
+                "is_functional":is_functional
+            }
             index_res = rest_api_call('POST','optjobs/'+optjob_id.__str__()+'/tables/'+table_id.__str__()+'/indexes/',data,token)
             if len(index_res.keys()) == 0:
                 return optjob_id
