@@ -158,10 +158,10 @@ def collect_query_data(conn,sqltext,default_schema,token) :
             if not col_row: break           
             col_row = col_row[0]
 
-            CHARACTER_MAXIMUM_LENGTH = col_row['CHARACTER_MAXIMUM_LENGTH']
-            NUMERIC_PRECISION = col_row['NUMERIC_PRECISION']
-            NUMERIC_SCALE = col_row['NUMERIC_SCALE']
-            CHARACTER_SET_NAME = col_row['CHARACTER_SET_NAME']
+            CHARACTER_MAXIMUM_LENGTH = col_row['CHARACTER_MAXIMUM_LENGTH'] if col_row['CHARACTER_MAXIMUM_LENGTH'] != None else "null"
+            NUMERIC_PRECISION = col_row['NUMERIC_PRECISION'] if col_row['NUMERIC_PRECISION'] != None else "null"
+            NUMERIC_SCALE = col_row['NUMERIC_SCALE'] if col_row['NUMERIC_SCALE'] != None else "null"
+            CHARACTER_SET_NAME = col_row['CHARACTER_SET_NAME'] if col_row['CHARACTER_SET_NAME'] != None else "null"
 
             # Build columns JSON
             columnsjson[col_row['COLUMN_NAME']] = {"ordinal_position":col_row['ORDINAL_POSITION'],"is_nullable":col_row['IS_NULLABLE'],
@@ -179,22 +179,6 @@ def collect_query_data(conn,sqltext,default_schema,token) :
             return optjob_id
         table_id = table_res['id']
 
-        columnsjson = {}
-        while True:
-            col_row = r.fetch_row(how=1)
-            if not col_row: break           
-            col_row = col_row[0]
-
-            CHARACTER_MAXIMUM_LENGTH = col_row['CHARACTER_MAXIMUM_LENGTH'] if col_row['CHARACTER_MAXIMUM_LENGTH'] != None else "null"
-            NUMERIC_PRECISION = col_row['NUMERIC_PRECISION'] if col_row['NUMERIC_PRECISION'] != None else "null"
-            NUMERIC_SCALE = col_row['NUMERIC_SCALE'] if col_row['NUMERIC_SCALE'] != None else "null"
-            CHARACTER_SET_NAME = col_row['CHARACTER_SET_NAME'] if col_row['CHARACTER_SET_NAME'] != None else "null"
-
-            # Build columns JSON
-            columnsjson[col_row['COLUMN_NAME']] = {"ordinal_position":col_row['ORDINAL_POSITION'],"is_nullable":col_row['IS_NULLABLE'],
-            "data_type":col_row['DATA_TYPE'],"character_maximum_length":CHARACTER_MAXIMUM_LENGTH,"numeric_precision":NUMERIC_PRECISION,
-            "numeric_scale":NUMERIC_SCALE,"character_set_name":CHARACTER_SET_NAME}
-        
 
         # Index data
         # Contemplate functional indexes in MySQL 8.0
