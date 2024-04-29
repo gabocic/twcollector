@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+parent_path=$1
+supported_major_versions="10.4 10.5 10.6 5.6 5.7 8.0"
+log_file=$parent_path/collector.log
+output_dir=$parent_path/collection_output
+common_costs_query_script=$parent_path/sql/common_costs_queries.sql
+mysql_costs_query_script=$parent_path/sql/mysql_costs_queries.sql
+general_info_file=$output_dir/general_info.csv
+optimizer_switch_file=$output_dir/optimizer_switch.csv
+stats_conf_file=$output_dir/stats_conf.csv
+query_digest_file=$output_dir/query_digest.txt
+table_list_file=$output_dir/table_list.txt
+schema_info_file=$output_dir/schema_info.txt
+costs_query_file=$output_dir/costs.txt
+es_costs_query_file=$output_dir/costs.txt
+sql_commands_file=sql_commands.sql
+explain_stmt_file=explain_stmt.sql
+mdb_costs_query_script=mdb_costs_queries.sql
