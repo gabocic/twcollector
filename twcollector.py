@@ -95,7 +95,8 @@ def collect_query_data(conn,sqltext,default_schema,token) :
         return optjob_id
 
     # Attach execution plan to job
-    data = {"plan": json.dumps(explainjs.getObject())}
+    #data = {"plan": json.dumps(explainjs.getObject())}
+    data = {"plan": json.dumps(explainjs)}
     qp_res = rest_api_call('POST','optjobs/'+optjob_id.__str__()+'/executionplan/',data,token)
     if len(qp_res.keys()) == 0:
         return optjob_id
@@ -242,6 +243,7 @@ class ConnectionError(Exception):
 class OptJob:
     def __init__(self,hostname,user,passwd,defdb,port,sqltext,token):
         self.connection = None
+        self.job_id = None
         self.token = token
         self.params = {'hostname':hostname, 'username':user,'password':passwd,'database':defdb,'port':port}
 
@@ -255,7 +257,6 @@ class OptJob:
             parse_one(sqltext,"mysql").find_all(exp.Table)
         except Exception as e:
             print('Could not parse query')
-            sys.exit()
         else:
             self.connection = self.create_conn()
             self.job_id = collect_query_data(self.connection,sqltext,self.params['database'],self.token)
