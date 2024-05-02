@@ -9,7 +9,8 @@ import random
 import string
 import json_duplicate_keys
 
-twengine_url = 'https://tuningwizard.query-optimization.com/api/'
+#twengine_url = 'https://tuningwizard.query-optimization.com/api/'
+twengine_url = 'http://localhost:8000/api/'
 
 def close_conn(dbconn):
     dbconn.close()
@@ -283,3 +284,6 @@ class OptJob:
             query_res = rest_api_call('PUT','optjobs/'+self.job_id.__str__()+'/',{},self.token)
             self.analysis_result = query_res
 
+    def send_report(self):
+        if self.job_id != None:
+            query_res = rest_api_call('POST','optjobs/'+self.job_id.__str__()+'/mailreport/',{},self.token)
