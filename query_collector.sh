@@ -283,8 +283,8 @@ function token_request() {
         read -p "Please write your first name: " first_name
         read -p "Please write your last name: " last_name
         read -p "Please provide an active email: " email
-        read -p "Please provide a password. This will be required in case you want to retrieve the token again: " password_1
-        read -p "Repeat the email one more time: " password_2
+        read -sp "Please provide a password. This will be required in case you want to retrieve the token again: " password_1
+        read -sp "Repeat the password one more time: " password_2
         
         while [ "$password_1" != "$password_2" ]
         do
@@ -302,7 +302,6 @@ function token_request() {
 
         # Sign up
         curl -X POST -H 'Content-Type: application/json' -d "$regdatajs" 'https://tuningwizard.query-optimization.com/api/accounts/signup/' > /dev/null 2>&1
-        echo $?
         log info "Check your email and verify your account. Then press enter.."
         read
 
@@ -313,13 +312,12 @@ function token_request() {
     }
     
     ## Main
-    read -p "You need a Tuning Wizard API token to authenticate. If you already have one, please paste it below. Otherwise, hit enter to request one" auth_token
+    read -p "You need a Tuning Wizard API token to authenticate. If you already have one, please paste it here. Otherwise, hit enter to request one:" auth_token
     echo ""
     if [ -z $auth_token ]
     then
         register_account
     fi
-    echo "TOKEN: $auth_token"
 }
 
 function main() {
@@ -401,7 +399,7 @@ function main() {
     $parent_path/pt-query-digest \
         --output=json \
         --max-line-length=0 \
-        --limit=20 \
+        --limit=10 \
         --no-version-check \
         --no-continue-on-error $dbparam_slowquerylogfile > $query_digest_file 2>>$log_file
 

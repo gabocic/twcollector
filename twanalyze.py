@@ -24,6 +24,9 @@ sqdict = json.load(sqjs)
 
 for i,queryblock in enumerate(sqdict['classes']):
 
+    # Skip empty queries
+    if queryblock['example']['query'] == '/* No query */':
+        continue
     print("============== Query ",i+1,"==================\n")
     sqltext = queryblock['example']['query']
     print(sqltext)
@@ -46,6 +49,8 @@ for i,queryblock in enumerate(sqdict['classes']):
     print(" ## Analysis result ")
     result = json.dumps(myjob.analysis_result,indent=4)
     print(result)
+    print("Sending report to your email..")
+    myjob.send_report()
     
     # Delete object
     del myjob
