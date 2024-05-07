@@ -9,8 +9,7 @@ import random
 import string
 import json_duplicate_keys
 
-#twengine_url = 'https://tuningwizard.query-optimization.com/api/'
-twengine_url = 'http://localhost:8000/api/'
+twengine_url = 'https://tuningwizard.query-optimization.com/api/'
 
 def close_conn(dbconn):
     dbconn.close()
@@ -96,7 +95,6 @@ def collect_query_data(conn,sqltext,default_schema,token) :
         return optjob_id
 
     # Attach execution plan to job
-    #data = {"plan": json.dumps(explainjs.getObject())}
     data = {"plan": json.dumps(explainjs)}
     qp_res = rest_api_call('POST','optjobs/'+optjob_id.__str__()+'/executionplan/',data,token)
     if len(qp_res.keys()) == 0:
