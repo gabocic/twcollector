@@ -33,9 +33,23 @@ function tool_exists() {
 }
 
 function banner() {
-    echo "============================================" 
-    echo "===   Slow query and Stats collection    ==="
-    echo "============================================"
+    echo "===========================================" 
+    echo "=== Tuning Wizard - Slow query analyzer ==="
+    echo "==========================================="
+    echo ""
+    echo "This tool will help you by: "
+    echo " - Sorting and priortizing the slow queries logged"
+    echo " - Collecting the required info for analysis"
+    echo " - Authenticating against Tuning Wizard"
+    echo " - Submitting the queries for review"
+    echo ""
+    echo "For that, you will need:"
+    echo " * Database username and password"
+    echo " * An email where we can send you the analysis report"
+    echo " * A password to secure your token"
+    echo ""
+    echo ""
+    echo "DON'T Panic! the tool will guide you through the process"
     echo ""
 }
 
@@ -54,7 +68,7 @@ function request_db_params() {
         read -p "Please provide the Database port [$default_db_port]: " db_port
         db_port=${db_port:-$default_db_port}
     fi
-    read -p "Please specify the database name, in case we need it: " defaultdb
+    read -p "Please specify a default database name, in case we need it: " defaultdb
 }
 
 
@@ -324,9 +338,9 @@ function main() {
 
     # Create collection directories and remove any files
     init_dirs
-    log info "======= Starting collection process ========"
 
     # Check that the MySQL client is installed
+    log info "Checking that required tools are installed"
     tool_exists mysql
     dbcli=$toolpath
 
@@ -341,10 +355,8 @@ function main() {
 
     # Retrieve relevant server configuration
     retrieve_mysql_param "version" dbparam_version 0
-    save_var_to_file version $dbparam_version $general_info_file
 
     retrieve_mysql_param "innodb_version" dbparam_idb_version 0
-    save_var_to_file idb_version $dbparam_idb_version $general_info_file
     major_version=`echo $dbparam_idb_version | awk -F "." '{print $1"."$2}'`
 
     # Are we working with MariaDB?
@@ -361,7 +373,6 @@ function main() {
     
     retrieve_mysql_param "long_query_time" dbparam_longquerytime 0
     log info "Long query time set to $dbparam_longquerytime seconds"
-    save_var_to_file long_query_time $dbparam_longquerytime $general_info_file
 
     retrieve_mysql_param "min_examined_row_limit" dbparam_minexaminedrowlimit 0
     log info "Minimum rows read to be included in the slow query log: $dbparam_minexaminedrowlimit"
@@ -395,7 +406,7 @@ function main() {
     fi
 
     # Create query digest
-    log info "I now will aggregate slow queries and compute some stats.."
+    log info "I will now aggregate and prioritize the slow queries.."
     $parent_path/pt-query-digest \
         --output=json \
         --max-line-length=0 \
@@ -412,6 +423,32 @@ function main() {
 
     # Request token or validate existing one
     token_request
+
+    # Prepare python env
+
+    ## Make sure we have python available
+    which python3 > /dev/null
+
+    if [ $? -eq 1 ]
+    then
+        echo "Python3 is not installed on this system. Please install it first and retry"
+        exit 1
+    else
+        PYTHONBIN=`which python3`
+    fi
+
+    ## deactivate in case we in one already
+    deactivate > /dev/null 2>&1
+
+    # Create virtual environment
+    $PYTHONBIN -m venv pve
+
+    # Activate python environment
+    source ./pve/bin/activate
+
+    log info "Submitting queries for review"
+    # Install dependencies
+    python -m pip install -r requirements.txt
 
     # Call twcollector to submit a job per slow query
     python twanalyze.py --db_user=$db_user --db_pass=$db_pass --db_host=$db_host --db_port=$db_port --db_sock=$db_sock --auth_token=$auth_token --db_name=$defaultdb --query_digest_file=$query_digest_file

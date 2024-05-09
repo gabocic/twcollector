@@ -1,4 +1,4 @@
 pymysql
-sqlglot
+sqlglot==4.1.1
 requests
 json-duplicate-keys

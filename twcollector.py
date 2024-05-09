@@ -5,8 +5,6 @@ import pymysql
 import json
 import requests
 import sys
-import random
-import string
 import json_duplicate_keys
 
 twengine_url = 'https://tuningwizard.query-optimization.com/api/'
@@ -93,7 +91,7 @@ def collect_query_data(conn,sqltext,default_schema,token) :
         return optjob_id
 
     # Attach execution plan to job
-    data = {"plan": json.dumps(explainjs)}
+    data = {"plan": json.dumps(explainjs.getObject())}
     qp_res = rest_api_call('POST','optjobs/'+optjob_id.__str__()+'/executionplan/',data,token)
     if len(qp_res.keys()) == 0:
         return optjob_id

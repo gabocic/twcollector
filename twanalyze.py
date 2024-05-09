@@ -44,11 +44,6 @@ for i,queryblock in enumerate(sqdict['classes']):
     # Run analysis
     myjob.analyze()
 
-    # Print the results in colorful JSON
-    print("\n \n")
-    print(" ## Analysis result ")
-    result = json.dumps(myjob.analysis_result,indent=4)
-    print(result)
     print("Sending report to your email..")
     myjob.send_report()
     
