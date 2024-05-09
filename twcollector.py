@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 from sqlglot import parse_one, exp, errors
-import MySQLdb
+import pymysql
 import json
 import requests
 import sys
@@ -61,13 +61,10 @@ def get_server_parameter(conn,var_name):
     result = None
     varref = '@@GLOBAL.'+var_name
     query = 'SELECT '+varref
-    try:
-        conn.query(query)
-    except Exception as e:
-        print(e)
-    else:
-        r = conn.store_result()
-        result = r.fetch_row(how=1)[0][varref]
+    with conn.cursor() as cursor:
+        cursor.execute(query)
+        r = cursor.fetchone()
+        result = r[varref]
     
     return result 
 
@@ -75,11 +72,12 @@ def get_server_parameter(conn,var_name):
 def collect_query_data(conn,sqltext,default_schema,token) :
 
     # Retrieve execution plan
-    explainstmt = 'EXPLAIN FORMAT=JSON '+sqltext
-    conn.query(explainstmt)
-    r = conn.store_result()
-    explaintxt = r.fetch_row(how=1)[0]['EXPLAIN']
-    explainjs = json_duplicate_keys.loads(explaintxt)
+    with conn.cursor() as cursor:
+        explainstmt = 'EXPLAIN FORMAT=JSON '+sqltext
+        cursor.execute(explainstmt)
+        r = cursor.fetchone()
+        explaintxt = r['EXPLAIN']
+        explainjs = json_duplicate_keys.loads(explaintxt)
 
     # Create Optimization Job
     data = {}
@@ -136,37 +134,37 @@ def collect_query_data(conn,sqltext,default_schema,token) :
             schema = tablesdict[tablename]
 
         # Table data
-        conn.query('select TABLE_NAME,TABLE_SCHEMA,ENGINE,TABLE_ROWS,AVG_ROW_LENGTH,DATA_LENGTH,INDEX_LENGTH,TABLE_COLLATION  \
-        from information_schema.tables where table_name = \''+tablename+'\' and table_schema = \''+schema+'\'')
-        r = conn.store_result()
+        with conn.cursor() as cursor:
+            cursor.execute('select TABLE_NAME,TABLE_SCHEMA,ENGINE,TABLE_ROWS,AVG_ROW_LENGTH,DATA_LENGTH,INDEX_LENGTH,TABLE_COLLATION  \
+            from information_schema.tables where table_name = \''+tablename+'\' and table_schema = \''+schema+'\'')
+            table_row = cursor.fetchall()
 
-        # If no tables or more than one were returned, something is wrong
-        table_row = r.fetch_row(how=1)
-        if len(table_row) != 1:
-            print("We couldn't retrieve information for table",tablename,"- Is it temporary?")
-            return optjob_id
-        table_row = table_row[0]
-        
+            # If no tables or more than one were returned, something is wrong
+            if len(table_row) != 1:
+                print("We couldn't retrieve information for table",tablename,"- Is it temporary?")
+                return optjob_id
+
+            table_row = table_row[0]
+
         # Column info
-        conn.query('select COLUMN_NAME,ORDINAL_POSITION,IS_NULLABLE,DATA_TYPE,CHARACTER_MAXIMUM_LENGTH,NUMERIC_PRECISION,NUMERIC_SCALE,CHARACTER_SET_NAME  \
-        from information_schema.columns where table_name = \''+tablename+'\' and table_schema = \''+schema+'\'')
-        r = conn.store_result()
+        with conn.cursor() as cursor:
+            cursor.execute('select COLUMN_NAME,ORDINAL_POSITION,IS_NULLABLE,DATA_TYPE,CHARACTER_MAXIMUM_LENGTH,NUMERIC_PRECISION,NUMERIC_SCALE,CHARACTER_SET_NAME  \
+            from information_schema.columns where table_name = \''+tablename+'\' and table_schema = \''+schema+'\'')
 
-        columnsjson = {}
-        while True:
-            col_row = r.fetch_row(how=1)
-            if not col_row: break           
-            col_row = col_row[0]
+            columnsjson = {}
+            while True:
+                col_row = cursor.fetchone()
+                if not col_row: break           
 
-            CHARACTER_MAXIMUM_LENGTH = col_row['CHARACTER_MAXIMUM_LENGTH'] if col_row['CHARACTER_MAXIMUM_LENGTH'] != None else "null"
-            NUMERIC_PRECISION = col_row['NUMERIC_PRECISION'] if col_row['NUMERIC_PRECISION'] != None else "null"
-            NUMERIC_SCALE = col_row['NUMERIC_SCALE'] if col_row['NUMERIC_SCALE'] != None else "null"
-            CHARACTER_SET_NAME = col_row['CHARACTER_SET_NAME'] if col_row['CHARACTER_SET_NAME'] != None else "null"
+                CHARACTER_MAXIMUM_LENGTH = col_row['CHARACTER_MAXIMUM_LENGTH'] if col_row['CHARACTER_MAXIMUM_LENGTH'] != None else "null"
+                NUMERIC_PRECISION = col_row['NUMERIC_PRECISION'] if col_row['NUMERIC_PRECISION'] != None else "null"
+                NUMERIC_SCALE = col_row['NUMERIC_SCALE'] if col_row['NUMERIC_SCALE'] != None else "null"
+                CHARACTER_SET_NAME = col_row['CHARACTER_SET_NAME'] if col_row['CHARACTER_SET_NAME'] != None else "null"
 
-            # Build columns JSON
-            columnsjson[col_row['COLUMN_NAME']] = {"ordinal_position":col_row['ORDINAL_POSITION'],"is_nullable":col_row['IS_NULLABLE'],
-            "data_type":col_row['DATA_TYPE'],"character_maximum_length":CHARACTER_MAXIMUM_LENGTH,"numeric_precision":NUMERIC_PRECISION,
-            "numeric_scale":NUMERIC_SCALE,"character_set_name":CHARACTER_SET_NAME}
+                # Build columns JSON
+                columnsjson[col_row['COLUMN_NAME']] = {"ordinal_position":col_row['ORDINAL_POSITION'],"is_nullable":col_row['IS_NULLABLE'],
+                "data_type":col_row['DATA_TYPE'],"character_maximum_length":CHARACTER_MAXIMUM_LENGTH,"numeric_precision":NUMERIC_PRECISION,
+                "numeric_scale":NUMERIC_SCALE,"character_set_name":CHARACTER_SET_NAME}
         
 
         # Attach table data to job
@@ -189,45 +187,44 @@ def collect_query_data(conn,sqltext,default_schema,token) :
             index_query = 'select INDEX_NAME,NON_UNIQUE,SEQ_IN_INDEX,COLUMN_NAME,COLLATION,CARDINALITY,SUB_PART,PACKED,NULLABLE,INDEX_TYPE \
             from information_schema.statistics where table_name = \''+tablename+'\' and table_schema = \''+schema+'\''
 
-        conn.query(index_query)
-        r = conn.store_result()
-        
-        while True:
-            index_row = r.fetch_row(how=1)
-            if not index_row: break           
-            index_row = index_row[0]
+        with conn.cursor() as cursor:
+            cursor.execute(index_query)
+            
+            while True:
+                index_row = cursor.fetchone()
+                if not index_row: break           
 
-            # Attach index data to job
-            if index_row['NULLABLE'] == 'YES':
-                nullable = True
-            else:
-                nullable = False
+                # Attach index data to job
+                if index_row['NULLABLE'] == 'YES':
+                    nullable = True
+                else:
+                    nullable = False
 
-            # Define the is_functional field
-            is_functional = False
-            expression = None
-            if 'EXPRESSION' in index_row \
-            and index_row['EXPRESSION'] != None \
-            and index_row['COLUMN_NAME'] == None:
-                is_functional = True
-                expression = index_row['EXPRESSION']
-        
-            data = {
-                "key_name":index_row['INDEX_NAME'],
-                "unique":not bool(index_row['NON_UNIQUE']),
-                "seq_in_index":index_row['SEQ_IN_INDEX'],
-                "column_name":index_row['COLUMN_NAME'],
-                "cardinality":index_row['CARDINALITY'],
-                "sub_part":index_row['SUB_PART'],
-                "packed":index_row['PACKED'],
-                "nullable":nullable,
-                "index_type":index_row['INDEX_TYPE'],
-                "expression":expression,
-                "is_functional":is_functional
-            }
-            index_res = rest_api_call('POST','optjobs/'+optjob_id.__str__()+'/tables/'+table_id.__str__()+'/indexes/',data,token)
-            if len(index_res.keys()) == 0:
-                return optjob_id
+                # Define the is_functional field
+                is_functional = False
+                expression = None
+                if 'EXPRESSION' in index_row \
+                and index_row['EXPRESSION'] != None \
+                and index_row['COLUMN_NAME'] == None:
+                    is_functional = True
+                    expression = index_row['EXPRESSION']
+            
+                data = {
+                    "key_name":index_row['INDEX_NAME'],
+                    "unique":not bool(index_row['NON_UNIQUE']),
+                    "seq_in_index":index_row['SEQ_IN_INDEX'],
+                    "column_name":index_row['COLUMN_NAME'],
+                    "cardinality":index_row['CARDINALITY'],
+                    "sub_part":index_row['SUB_PART'],
+                    "packed":index_row['PACKED'],
+                    "nullable":nullable,
+                    "index_type":index_row['INDEX_TYPE'],
+                    "expression":expression,
+                    "is_functional":is_functional
+                }
+                index_res = rest_api_call('POST','optjobs/'+optjob_id.__str__()+'/tables/'+table_id.__str__()+'/indexes/',data,token)
+                if len(index_res.keys()) == 0:
+                    return optjob_id
     return optjob_id
 
 
@@ -266,8 +263,16 @@ class OptJob:
 
     def create_conn(self):
         try:
-            dbconn = MySQLdb.connect(host=self.params['hostname'], user=self.params['username'], passwd=self.params['password'], database=self.params['database'],port=self.params['port'])
+            dbconn = pymysql.connect(
+                host=self.params['hostname'], 
+                user=self.params['username'], 
+                passwd=self.params['password'], 
+                database=self.params['database'],
+                port=self.params['port'],
+                cursorclass=pymysql.cursors.DictCursor
+            )
         except Exception as e:
+            print("We got the following error connecting to the database:")
             print(e)
             sys.exit()
         else:
