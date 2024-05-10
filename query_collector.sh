@@ -60,7 +60,7 @@ function request_db_params() {
     read -p "Please provide the Database user: " db_user
     read -sp "Please provide the Database password: " db_pass
     echo ""
-    read -p "If connecting through socket, please specify the path: " db_sock
+    read -p "If connecting through socket, please specify the path. Otherwise, press enter: " db_sock
     if [ -z $db_sock ]
     then
         read -p "Please provide the Database host [$default_db_host]: " db_host
@@ -297,14 +297,21 @@ function token_request() {
         read -p "Please write your first name: " first_name
         read -p "Please write your last name: " last_name
         read -p "Please provide an active email: " email
-        read -sp "Please provide a password. This will be required in case you want to retrieve the token again: " password_1
-        read -sp "Repeat the password one more time: " password_2
-        
+
+        password_1=1
+        password_2=2
+        pcount=0
         while [ "$password_1" != "$password_2" ]
         do
-          log warn "Passwords don't match"
-          read -p "Please provide a password. This will be required in case you want to retrieve the token again: " password_1
-          read -p "Repeat the email one more time: " password_2
+          if [ $pcount -gt 0 ]
+          then
+            log warn "Passwords don't match"
+          fi
+          read -sp "Please provide a password. This will be required in case you want to retrieve the token again:" password_1
+          echo ""
+          read -sp "Repeat the password one more time:" password_2
+          echo ""
+          pcount=$((pcount+1))
         done
 
         regdatajs='{
@@ -315,13 +322,12 @@ function token_request() {
         }'
 
         # Sign up
-        curl -X POST -H 'Content-Type: application/json' -d "$regdatajs" 'https://tuningwizard.query-optimization.com/api/accounts/signup/' > /dev/null 2>&1
+        curl -s -X POST -H 'Content-Type: application/json' -d "$regdatajs" 'https://tuningwizard.query-optimization.com/api/accounts/signup/' > /dev/null 2>&1
         log info "Check your email and verify your account. Then press enter.."
         read
 
         # Login and get your token
-        tokenresp=`curl -X POST -H 'Content-Type: application/json' -d "$regdatajs" 'https://tuningwizard.query-optimization.com/api/accounts/login/'`
-        echo $?
+        tokenresp=`curl -s -X POST -H 'Content-Type: application/json' -d "$regdatajs" 'https://tuningwizard.query-optimization.com/api/accounts/login/'`
         auth_token=`echo $tokenresp  | awk -F '"' '{print $4}'`
     }
     
@@ -385,7 +391,7 @@ function main() {
     log info "Slow query log file path: $dbparam_slowquerylogfile"
 
     # Check access to slow query log file
-    ls $dbparam_slowquerylogfile > /dev/null 2>&1
+    tail -n1 $dbparam_slowquerylogfile > /dev/null 2>&1
     if [ $? -ne 0 ]
     then
         log warn "I can't access the slow query log in '$dbparam_slowquerylogfile'"
@@ -446,10 +452,11 @@ function main() {
     # Activate python environment
     source ./pve/bin/activate
 
-    log info "Submitting queries for review"
+    log info "Installing Python dependencies"
     # Install dependencies
-    python -m pip install -r requirements.txt
+    python -m pip install -r requirements.txt > /dev/null 2>&1
 
+    log info "Submitting queries for review"
     # Call twcollector to submit a job per slow query
     python twanalyze.py --db_user=$db_user --db_pass=$db_pass --db_host=$db_host --db_port=$db_port --db_sock=$db_sock --auth_token=$auth_token --db_name=$defaultdb --query_digest_file=$query_digest_file
 
