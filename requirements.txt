@@ -1,5 +1,4 @@
-mysqlclient
-sqlparse
-sqlglot
+pymysql
+sqlglot==4.1.1
 requests
 json-duplicate-keys
