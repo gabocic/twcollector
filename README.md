@@ -8,6 +8,10 @@ In this repository, you will find two main scripts:
 
 ## Using query_collector.sh
 
+:warning: Keep in mind that the queries in the slow query log could contain sensitive data. Samples of each slow query analyzed are submitted to Tuning Wizard for analysis.
+
+:information_source: This tool was designed to run locally to the MySQL host. Only Linux is suppoted for now
+
 ### 1. Download the files in this repo
 
 You can either use the "Download zip" option in the **<> Code** button or `git clone`
