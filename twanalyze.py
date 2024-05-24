@@ -30,13 +30,17 @@ for i,queryblock in enumerate(sqdict['classes']):
     print("============== Query ",i+1,"==================\n")
     sqltext = queryblock['example']['query']
     print(sqltext)
+    if 'db' in queryblock['metrics'] and queryblock['metrics']['db']['value'] != "":
+        dbname = queryblock['metrics']['db']['value']
+    else:
+        dbname = args.db_name
 
     # For each slow query instantiate optimization job by 
     # passing connections parameters, together with the query
     myjob =  OptJob(args.db_host,
     args.db_user,
     args.db_pass,
-    args.db_name,
+    dbname,
     int(args.db_port),
     sqltext,
     args.auth_token)

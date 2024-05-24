@@ -72,10 +72,15 @@ def collect_query_data(conn,sqltext,default_schema,token) :
     # Retrieve execution plan
     with conn.cursor() as cursor:
         explainstmt = 'EXPLAIN FORMAT=JSON '+sqltext
-        cursor.execute(explainstmt)
-        r = cursor.fetchone()
-        explaintxt = r['EXPLAIN']
-        explainjs = json_duplicate_keys.loads(explaintxt)
+        try:
+            cursor.execute(explainstmt)
+        except Exception as err:
+            print(err)
+            return None
+        else:
+            r = cursor.fetchone()
+            explaintxt = r['EXPLAIN']
+            explainjs = json_duplicate_keys.loads(explaintxt)
 
     # Create Optimization Job
     data = {}
