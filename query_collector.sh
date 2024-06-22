@@ -447,7 +447,10 @@ function main() {
     deactivate > /dev/null 2>&1
 
     # Create virtual environment
-    $PYTHONBIN -m venv pve
+    $PYTHONBIN -m venv --without-pip pve
+    source pve/bin/activate
+    curl https://bootstrap.pypa.io/pip/3.6/get-pip.py | $PYTHONBIN > /dev/null 2>&1
+    deactivate
 
     # Activate python environment
     source ./pve/bin/activate
